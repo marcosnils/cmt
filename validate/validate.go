@@ -1,7 +1,6 @@
 package validate
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -30,8 +29,18 @@ var Command = cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) {
-		srcURL := parseURL(c.String("src"))
-		dstURL := parseURL(c.String("dst"))
+		src := c.String("src")
+		if src != "" && !strings.HasPrefix(src, "ssh://") {
+			src = fmt.Sprintf("ssh://%s", src)
+		}
+
+		dst := c.String("dst")
+		if dst != "" && !strings.HasPrefix(dst, "ssh://") {
+			dst = fmt.Sprintf("ssh://%s", dst)
+		}
+
+		srcURL := parseURL(src)
+		dstURL := parseURL(dst)
 
 		Validate(srcURL, dstURL)
 		println("Validation succeded")
@@ -117,7 +126,7 @@ func checkVersion(sCmd, dCmd cmd.Cmd, name string) error {
 	}
 
 	if sourceVersion != destVersion {
-		return errors.New("ERROR: Source and destination versions do not match")
+		return fmt.Errorf("ERROR: Source and destination versions of %s do not match", name)
 	}
 
 	return nil
