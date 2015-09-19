@@ -76,7 +76,24 @@ func Validate(src, dst *url.URL) {
 	if e := checkVersion(srcCmd, dstCmd, "runc"); e != nil {
 		log.Fatal(e)
 	}
+	if e := checkKernelCap(srcCmd); e != nil {
+		log.Fatal(e)
+	}
+	if e := checkKernelCap(dstCmd); e != nil {
+		log.Fatal(e)
+	}
+}
 
+func checkKernelCap(c cmd.Cmd) error {
+	_, _, err := c.Run("sudo", "criu", "check", "--ms")
+	if _, ok := err.(*ssh.ExitError); ok {
+		return fmt.Errorf("Error criu checks do not pass")
+	} else if _, ok := err.(*exec.ExitError); ok {
+		return fmt.Errorf("Error criu checks do not pass")
+	} else if err != nil {
+		return fmt.Errorf("Connection error: %s ", err)
+	}
+	return err
 }
 
 func getCommand(hostURL *url.URL) cmd.Cmd {
