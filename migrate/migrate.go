@@ -32,6 +32,5 @@ var Command = cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) {
-		println("migrate")
 	},
 }

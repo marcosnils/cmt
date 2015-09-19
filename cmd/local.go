@@ -8,11 +8,11 @@ import (
 type LocalCmd struct {
 }
 
-func NewLocal() LocalCmd {
-	return LocalCmd{}
+func NewLocal() Cmd {
+	return &LocalCmd{}
 }
 
-func (c LocalCmd) Run(name string, args ...string) (string, string, error) {
+func (c *LocalCmd) Run(name string, args ...string) (string, string, error) {
 	command := exec.Command(name, args...)
 
 	var stdout bytes.Buffer
