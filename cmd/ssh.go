@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/url"
 	"os"
@@ -23,7 +24,8 @@ type SSHCmd struct {
 func NewSSH(user, host string) *SSHCmd {
 	c := SSHCmd{}
 	c.config.User = user
-	c.host = host
+	chunks := strings.Split(host, ":")
+	c.host = chunks[0]
 	return &c
 }
 
@@ -102,6 +104,12 @@ func (r *SSHCmd) Run(name string, args ...string) (string, string, error) {
 	err = session.Run(fmt.Sprintf("%s %s", name, strings.Join(args, " ")))
 
 	return stdout.String(), stderr.String(), err
+}
+func (r *SSHCmd) Output(name string, args ...string) (string, string, error) {
+	log.Println(name, args)
+	stdout, stderr, err := r.Run(name, args...)
+	log.Println(stdout, stderr)
+	return stdout, stderr, err
 }
 
 func (c *SSHCmd) URL(path string) *url.URL {

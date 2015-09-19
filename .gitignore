@@ -22,3 +22,10 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+cmt
+runtime.json
+config.json
+rootfs
+cpuinfo.img
+descriptors.json

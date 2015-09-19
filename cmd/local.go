@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"log"
 	"net/url"
 	"os/exec"
 )
@@ -25,6 +26,13 @@ func (c *LocalCmd) Run(name string, args ...string) (string, string, error) {
 	err := command.Run()
 
 	return stdout.String(), stderr.String(), err
+}
+
+func (c *LocalCmd) Output(name string, args ...string) (string, string, error) {
+	log.Println(name, args)
+	stdout, stderr, err := c.Run(name, args...)
+	log.Println(stdout, stderr)
+	return stdout, stderr, err
 }
 
 func (c *LocalCmd) URL(path string) *url.URL {

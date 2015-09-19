@@ -28,18 +28,8 @@ var Command = cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) {
-		src := c.String("src")
-		if src != "" && !strings.HasPrefix(src, "ssh://") {
-			src = fmt.Sprintf("ssh://%s", src)
-		}
-
-		dst := c.String("dst")
-		if dst != "" && !strings.HasPrefix(dst, "ssh://") {
-			dst = fmt.Sprintf("ssh://%s", dst)
-		}
-
-		srcURL := parseURL(src)
-		dstURL := parseURL(dst)
+		srcURL := ParseURL(c.String("src"))
+		dstURL := ParseURL(c.String("dst"))
 
 		Validate(srcURL, dstURL)
 		println("Validation succeded")
@@ -47,27 +37,32 @@ var Command = cli.Command{
 	},
 }
 
-func parseURL(stringURL string) *url.URL {
-	if stringURL == "" {
+func ParseURL(rawurl string) *url.URL {
+	if rawurl == "" {
 		return nil
 	}
-
-	parsedURL, err := url.Parse(stringURL)
-	if err != nil || parsedURL.Host == "" {
-		log.Fatal("Error parsing host: ", stringURL)
+	// We do this hack beacuse url.Parse require a schema to do the right thing
+	schemaUrl := rawurl
+	if !strings.HasPrefix(rawurl, "ssh://") {
+		schemaUrl = fmt.Sprintf("ssh://%s", rawurl)
 	}
 
-	return parsedURL
+	u, err := url.Parse(schemaUrl)
+	if err != nil {
+		log.Fatal("Error parsing host: ", rawurl)
+	}
+
+	return u
 
 }
 
-func Validate(src, dst *url.URL) {
-	if src == nil && dst == nil {
-		log.Fatal("Either one of dst or src must be specified")
+func Validate(src, dst *url.URL) (srcCmd, dstCmd cmd.Cmd) {
+	if src == nil || dst == nil {
+		log.Fatal("Both src and dst must be specified")
 	}
 
-	srcCmd := getCommand(src)
-	dstCmd := getCommand(dst)
+	srcCmd = GetCommand(src)
+	dstCmd = GetCommand(dst)
 
 	if e := checkVersion(srcCmd, dstCmd, "criu"); e != nil {
 		log.Fatal(e)
@@ -87,6 +82,8 @@ func Validate(src, dst *url.URL) {
 	if e := checkCPUCompat(srcCmd, dstCmd); e != nil {
 		log.Fatal(e)
 	}
+
+	return
 }
 
 func checkCPUCompat(srcCmd, dstCmd cmd.Cmd) error {
@@ -135,8 +132,8 @@ func checkKernelCap(c cmd.Cmd) error {
 	return err
 }
 
-func getCommand(hostURL *url.URL) cmd.Cmd {
-	if hostURL != nil {
+func GetCommand(hostURL *url.URL) cmd.Cmd {
+	if hostURL.Host != "" {
 		rc := cmd.NewSSH(hostURL.User.Username(), hostURL.Host)
 		if err := rc.UseAgent(); err != nil {
 			log.Fatal("Unable to use SSH agent for host: ", hostURL.String())

@@ -6,13 +6,15 @@ import (
 )
 
 type Cmd interface {
-	Run(c string, args ...string) (string, string, error)
+	Run(name string, args ...string) (string, string, error)
+	Output(name string, args ...string) (string, string, error)
 	URL(path string) *url.URL
 }
 
 func Scp(src, dest *url.URL) error {
 	scpCmd := NewLocal()
 	_, _, err := scpCmd.Run("scp", formatCopyURL(src), formatCopyURL(dest))
+
 	return err
 }
 
