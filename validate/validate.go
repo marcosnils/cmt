@@ -73,6 +73,9 @@ func Validate(src, dst *url.URL) {
 	if e := checkVersion(srcCmd, dstCmd, "criu"); e != nil {
 		log.Fatal(e)
 	}
+	if e := checkVersion(srcCmd, dstCmd, "runc"); e != nil {
+		log.Fatal(e)
+	}
 
 }
 
