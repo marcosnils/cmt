@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/url"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -76,12 +75,52 @@ func Validate(src, dst *url.URL) {
 	if e := checkVersion(srcCmd, dstCmd, "runc"); e != nil {
 		log.Fatal(e)
 	}
+
 	if e := checkKernelCap(srcCmd); e != nil {
 		log.Fatal(e)
 	}
+
 	if e := checkKernelCap(dstCmd); e != nil {
 		log.Fatal(e)
 	}
+
+	if e := checkCPUCompat(srcCmd, dstCmd); e != nil {
+		log.Fatal(e)
+	}
+}
+
+func checkCPUCompat(srcCmd, dstCmd cmd.Cmd) error {
+	// Dump
+	_, _, err := srcCmd.Run("sudo", "criu", "cpuinfo", "dump")
+	if _, ok := err.(*ssh.ExitError); ok {
+		return fmt.Errorf("Error dumping CPU info")
+	} else if _, ok := err.(*exec.ExitError); ok {
+		return fmt.Errorf("Error dumping CPU info")
+	} else if err != nil {
+		return fmt.Errorf("Connection error: %s ", err)
+	}
+
+	// Copy
+
+	err = cmd.Scp(srcCmd.URL("./cpuinfo.img"), dstCmd.URL("."))
+	if _, ok := err.(*ssh.ExitError); ok {
+		return fmt.Errorf("Error copying dump image")
+	} else if _, ok := err.(*exec.ExitError); ok {
+		return fmt.Errorf("Error copying dump image")
+	} else if err != nil {
+		return fmt.Errorf("Connection error: %s ", err)
+	}
+
+	// Check
+	_, _, err = srcCmd.Run("sudo", "criu", "cpuinfo", "check")
+	if _, ok := err.(*ssh.ExitError); ok {
+		return fmt.Errorf("Error checking CPU info")
+	} else if _, ok := err.(*exec.ExitError); ok {
+		return fmt.Errorf("Error checking CPU info")
+	} else if err != nil {
+		return fmt.Errorf("Connection error: %s ", err)
+	}
+	return nil
 }
 
 func checkKernelCap(c cmd.Cmd) error {
@@ -98,19 +137,7 @@ func checkKernelCap(c cmd.Cmd) error {
 
 func getCommand(hostURL *url.URL) cmd.Cmd {
 	if hostURL != nil {
-		hostPort := strings.Split(hostURL.Host, ":")
-		var port int
-		if len(hostPort) > 1 {
-			p, err := strconv.Atoi(hostPort[1])
-			if err != nil {
-				log.Fatal("Unable to parse port: ", hostPort[1])
-			}
-			port = p
-		} else {
-			// SSH default port
-			port = 22
-		}
-		rc := cmd.NewSSH(hostURL.User.Username(), hostPort[0], port)
+		rc := cmd.NewSSH(hostURL.User.Username(), hostURL.Host)
 		if err := rc.UseAgent(); err != nil {
 			log.Fatal("Unable to use SSH agent for host: ", hostURL.String())
 		}

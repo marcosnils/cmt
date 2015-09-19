@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"net/url"
 	"os/exec"
 )
 
@@ -24,4 +25,11 @@ func (c *LocalCmd) Run(name string, args ...string) (string, string, error) {
 	err := command.Run()
 
 	return stdout.String(), stderr.String(), err
+}
+
+func (c *LocalCmd) URL(path string) *url.URL {
+	return &url.URL{
+		Path: path,
+	}
+
 }

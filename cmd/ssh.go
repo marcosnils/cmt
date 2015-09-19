@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 
@@ -16,16 +17,13 @@ type SSHCmd struct {
 	config    ssh.ClientConfig
 	client    *ssh.Client
 	host      string
-	port      int
-	user      string
 	connected bool
 }
 
-func NewSSH(user, host string, port int) *SSHCmd {
+func NewSSH(user, host string) *SSHCmd {
 	c := SSHCmd{}
 	c.config.User = user
 	c.host = host
-	c.port = port
 	return &c
 }
 
@@ -70,7 +68,7 @@ func (r *SSHCmd) connect() error {
 		return nil
 	}
 
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", r.host, r.port), &r.config)
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", r.host, 22), &r.config)
 	if err != nil {
 		return err
 	}
@@ -104,4 +102,13 @@ func (r *SSHCmd) Run(name string, args ...string) (string, string, error) {
 	err = session.Run(fmt.Sprintf("%s %s", name, strings.Join(args, " ")))
 
 	return stdout.String(), stderr.String(), err
+}
+
+func (c *SSHCmd) URL(path string) *url.URL {
+	return &url.URL{
+		User: url.User(c.config.User),
+		Host: c.host,
+		Path: path,
+	}
+
 }
