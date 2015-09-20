@@ -22,6 +22,10 @@ var Command = cli.Command{
 			Name:  "dst",
 			Usage: "Target host to migrate the container",
 		},
+		cli.BoolFlag{
+			Name:  "pre-dump",
+			Usage: "Perform a pre-dump to minimize downtime",
+		},
 	},
 	Action: func(c *cli.Context) {
 		srcUrl := validate.ParseURL(c.String("src"))
@@ -31,54 +35,126 @@ var Command = cli.Command{
 		src, dst := validate.Validate(srcUrl, dstUrl)
 
 		log.Println("Preparing everything to do a checkpoint")
-		imagesPath := fmt.Sprintf("%s/images", srcUrl.Path)
 		containerId := getContainerId(srcUrl.Path)
+		var imagesPath string
 
-		_, _, err := src.Run("mkdir", "-p", imagesPath)
-		if err != nil {
-			log.Fatal("Error preparing images dir:", err)
-		}
+		if c.Bool("pre-dump") {
+			// Process pre-dump
+			predumpPath := fmt.Sprintf("%s/images/0", srcUrl.Path)
+			prepareDir(src, predumpPath)
 
-		log.Println("Performing the checkpoint")
-		_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath)
-		if err != nil {
-			log.Fatal("Error performing checkpoint:",err)
-		}
+			checkpoint(src, containerId, predumpPath, true)
 
-		srcTarFile := fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
-		dstTarFile := fmt.Sprintf("%s/images/dump.tar.gz", dstUrl.Path)
-		_, _, err = src.Run("sudo", "tar", "-czf", srcTarFile, "-C", fmt.Sprintf("%s/", imagesPath), ".")
-		if err != nil {
-			log.Fatal("Error compressing image in source:", err)
-		}
+			srcTarFile := fmt.Sprintf("%s/predump.tar.gz", srcUrl.Path)
+			prepareTar(src, srcTarFile, predumpPath)
 
-		log.Println("Copying checkpoint image to dst")
-		_, _, err = dst.Run("mkdir", "-p", fmt.Sprintf("%s/images", dstUrl.Path))
-		if err != nil {
-			log.Fatal("Error preparing image dir in dst", err)
-		}
+			prepareDir(dst, fmt.Sprintf("%s/images/0", dstUrl.Path))
 
-		err = cmd.Scp(src.URL(srcTarFile), dst.URL(fmt.Sprintf("%s/images", dstUrl.Path)))
-		if err != nil {
-			log.Fatal("Error copying image files to dst", err)
-		}
+			log.Println("Copying predump image to dst")
+			err := cmd.Scp(src.URL(srcTarFile), dst.URL(fmt.Sprintf("%s/images/0", dstUrl.Path)))
+			if err != nil {
+				log.Fatal("Error copying predump image files to dst", err)
+			}
 
-		log.Println("Preparing image at destination host")
-		_, _, err = dst.Run("sudo", "tar", "-C", fmt.Sprintf("%s/images", dstUrl.Path), "-xvzf", dstTarFile)
-		if err != nil {
-			log.Fatal("Error uncompressing image in destination:", err)
-		}
+			dstTarFile := fmt.Sprintf("%s/images/0/predump.tar.gz", dstUrl.Path)
+			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images/0", dstUrl.Path))
 
-		log.Println("Performing the restore")
-		configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
-		runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
-		dstImagesPath := fmt.Sprintf("%s/images", dstUrl.Path)
-		_, _, err = dst.Run("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
-		if err != nil {
-			log.Fatal("Error performing restore:", err)
+			// Process final image
+			imagesPath = fmt.Sprintf("%s/images/1", srcUrl.Path)
+			log.Println("Performing the checkpoint")
+			_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath, "--prev-images-dir", predumpPath)
+			if err != nil {
+				log.Fatal("Error performing checkpoint:", err)
+			}
+
+			srcTarFile = fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
+			prepareTar(src, srcTarFile, imagesPath)
+			prepareDir(dst, fmt.Sprintf("%s/images/1", dstUrl.Path))
+
+			log.Println("Copying predump image to dst")
+			err = cmd.Scp(src.URL(srcTarFile), dst.URL(fmt.Sprintf("%s/images/1", dstUrl.Path)))
+			if err != nil {
+				log.Fatal("Error copying predump image files to dst", err)
+			}
+
+			dstTarFile = fmt.Sprintf("%s/images/1/predump.tar.gz", dstUrl.Path)
+			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images/1", dstUrl.Path))
+
+			log.Println("Performing the restore")
+			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
+			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
+			dstImagesPath := fmt.Sprintf("%s/images/1", dstUrl.Path)
+			_, _, err = dst.Output("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
+			if err != nil {
+				log.Fatal("Error performing restore:", err)
+			}
+
+		} else {
+			imagesPath = fmt.Sprintf("%s/images", srcUrl.Path)
+			prepareDir(src, imagesPath)
+
+			checkpoint(src, containerId, imagesPath, false)
+
+			srcTarFile := fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
+			prepareTar(src, srcTarFile, imagesPath)
+
+			prepareDir(dst, fmt.Sprintf("%s/images", dstUrl.Path))
+
+			log.Println("Copying checkpoint image to dst")
+			err := cmd.Scp(src.URL(srcTarFile), dst.URL(fmt.Sprintf("%s/images", dstUrl.Path)))
+			if err != nil {
+				log.Fatal("Error copying image files to dst", err)
+			}
+
+			dstTarFile := fmt.Sprintf("%s/images/dump.tar.gz", dstUrl.Path)
+			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images", dstUrl.Path))
+
+			log.Println("Performing the restore")
+			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
+			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
+			dstImagesPath := fmt.Sprintf("%s/images", dstUrl.Path)
+			_, _, err = dst.Output("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
+			if err != nil {
+				log.Fatal("Error performing restore:", err)
+			}
+
 		}
 
 	},
+}
+
+func unpackTar(cmd cmd.Cmd, tarFile, workDir string) {
+	log.Println("Preparing image at destination host")
+	_, _, err := cmd.Run("sudo", "tar", "-C", workDir, "-xvzf", tarFile)
+	if err != nil {
+		log.Fatal("Error uncompressing image in destination:", err)
+	}
+}
+
+func prepareTar(cmd cmd.Cmd, tarFile, workDir string) {
+	_, _, err := cmd.Run("sudo", "tar", "-czf", tarFile, "-C", fmt.Sprintf("%s/", workDir), ".")
+	if err != nil {
+		log.Fatal("Error compressing image in source:", err)
+	}
+}
+
+func checkpoint(cmd cmd.Cmd, containerId, imagesPath string, predump bool) {
+	log.Printf("Performing the checkpoint predump =%s\n", predump)
+	args := []string{"runc", "--id", containerId, "checkpoint", "--image-path", imagesPath}
+	if predump {
+		args = append(args, "--pre-dump")
+	}
+	_, _, err := cmd.Run("sudo", args...)
+	if err != nil {
+		log.Fatal("Error performing checkpoint:", err)
+	}
+}
+
+func prepareDir(cmd cmd.Cmd, path string) {
+	_, _, err := cmd.Run("mkdir", "-p", path)
+	if err != nil {
+		log.Fatal("Error preparing pre-dump dir:", err)
+	}
 }
 
 func getContainerId(path string) string {
