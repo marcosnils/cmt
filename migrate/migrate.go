@@ -77,7 +77,7 @@ var Command = cli.Command{
 				log.Fatal("Error copying predump image files to dst", err)
 			}
 
-			dstTarFile = fmt.Sprintf("%s/images/1/predump.tar.gz", dstUrl.Path)
+			dstTarFile = fmt.Sprintf("%s/images/1/dump.tar.gz", dstUrl.Path)
 			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images/1", dstUrl.Path))
 
 			log.Println("Performing the restore")
@@ -139,7 +139,7 @@ func prepareTar(cmd cmd.Cmd, tarFile, workDir string) {
 }
 
 func checkpoint(cmd cmd.Cmd, containerId, imagesPath string, predump bool) {
-	log.Printf("Performing the checkpoint predump =%s\n", predump)
+	log.Printf("Performing the checkpoint predump = %s\n", predump)
 	args := []string{"runc", "--id", containerId, "checkpoint", "--image-path", imagesPath}
 	if predump {
 		args = append(args, "--pre-dump")
