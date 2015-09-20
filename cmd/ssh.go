@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,10 +16,11 @@ import (
 )
 
 type SSHCmd struct {
-	config    ssh.ClientConfig
-	client    *ssh.Client
-	host      string
-	connected bool
+	config         ssh.ClientConfig
+	client         *ssh.Client
+	host           string
+	connected      bool
+	currentSession *ssh.Session
 }
 
 func NewSSH(user, host string) *SSHCmd {
@@ -106,21 +108,34 @@ func (r *SSHCmd) Run(name string, args ...string) (string, string, error) {
 	return stdout.String(), stderr.String(), err
 }
 
-func (r *SSHCmd) Start(name string, args ...string) error {
+func (r *SSHCmd) Start(name string, args ...string) (Cmd, error) {
 	if !r.connected {
 		err := r.connect()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	session, err := r.client.NewSession()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer session.Close()
 
-	return session.Start(fmt.Sprintf("%s %s", name, strings.Join(args, " ")))
+	return r, session.Start(fmt.Sprintf("%s %s", name, strings.Join(args, " ")))
+}
+
+func (r *SSHCmd) Wait() error {
+	if r.currentSession == nil {
+		return errors.New("Start needs to be called before wait")
+	}
+
+	defer func() {
+		r.currentSession.Close()
+		r.currentSession = nil
+	}()
+
+	return r.currentSession.Wait()
 }
 
 func (r *SSHCmd) Output(name string, args ...string) (string, string, error) {

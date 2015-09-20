@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"sync"
 
 	"github.com/codegangsta/cli"
 	"github.com/marcosnils/cmt/cmd"
@@ -37,6 +38,8 @@ var Command = cli.Command{
 		log.Println("Preparing everything to do a checkpoint")
 		containerId := getContainerId(srcUrl.Path)
 		var imagesPath string
+
+		var restoreCmd cmd.Cmd
 
 		if c.Bool("pre-dump") {
 			// Process pre-dump
@@ -84,7 +87,7 @@ var Command = cli.Command{
 			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 			dstImagesPath := fmt.Sprintf("%s/images/1", dstUrl.Path)
-			err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
+			restoreCmd, err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
 			if err != nil {
 				log.Fatal("Error performing restore:", err)
 			}
@@ -113,14 +116,36 @@ var Command = cli.Command{
 			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 			dstImagesPath := fmt.Sprintf("%s/images", dstUrl.Path)
-			err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
+			restoreCmd, err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
 			if err != nil {
 				log.Fatal("Error performing restore:", err)
 			}
 
 		}
 
-		log.Println("Restore completed")
+		var restoreSucceed bool
+		var restoreError error
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		go func() {
+			restoreError = restoreCmd.Wait()
+			wg.Done()
+		}()
+
+		go func() {
+			log.Println("Checking if container started...")
+			wg.Done()
+		}()
+
+		wg.Wait()
+
+		if restoreSucceed {
+			log.Println("Restore finished successfully")
+		} else {
+			log.Println("Error performing restore:", restoreError)
+			// Rollback
+		}
 
 	},
 }

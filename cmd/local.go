@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"log"
 	"net/url"
 	"os/exec"
 )
 
 type LocalCmd struct {
+	currentCommand *exec.Cmd
 }
 
 func NewLocal() Cmd {
@@ -28,9 +30,23 @@ func (c *LocalCmd) Run(name string, args ...string) (string, string, error) {
 	return stdout.String(), stderr.String(), err
 }
 
-func (c *LocalCmd) Start(name string, args ...string) error {
+func (c *LocalCmd) Start(name string, args ...string) (Cmd, error) {
 	command := exec.Command(name, args...)
-	return command.Start()
+	c.currentCommand = command
+	return c, command.Start()
+}
+
+func (c *LocalCmd) Wait() error {
+	if c.currentCommand == nil {
+		return errors.New("Start needs to be called before wait")
+
+	}
+	defer func() {
+		// Clear out current command
+		c.currentCommand = nil
+
+	}()
+	return c.currentCommand.Wait()
 }
 
 func (c *LocalCmd) Output(name string, args ...string) (string, string, error) {
