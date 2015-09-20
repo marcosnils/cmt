@@ -3,7 +3,6 @@ package migrate
 import (
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -142,7 +141,7 @@ var Command = cli.Command{
 		go func() {
 			log.Println("Waiting for container to start...")
 			// We make a fast check so we don't wait for the first ticker internal
-			if isRunning(containerId) {
+			if isRunning(containerId, dst) {
 				restoreSucceed = true
 				wg.Done()
 				return
@@ -150,7 +149,7 @@ var Command = cli.Command{
 			ticker := time.NewTicker(200 * time.Millisecond)
 			go func() {
 				for _ = range ticker.C {
-					if isRunning(containerId) {
+					if isRunning(containerId, dst) {
 						restoreSucceed = true
 						break
 					}
@@ -175,10 +174,12 @@ var Command = cli.Command{
 	},
 }
 
-func isRunning(containerId string) bool {
-	if _, err := os.Stat(fmt.Sprintf("/var/run/opencontainer/containers/%s", containerId)); err == nil {
+func isRunning(containerId string, dstCmd cmd.Cmd) bool {
+	_, _, err := dstCmd.Run("stat", fmt.Sprintf("/var/run/opencontainer/containers/%s", containerId))
+	if err != nil {
 		return true
 	}
+
 	return false
 }
 
