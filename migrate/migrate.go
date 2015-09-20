@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/marcosnils/cmt/cmd"
@@ -22,8 +23,26 @@ var Command = cli.Command{
 			Name:  "dst",
 			Usage: "Target host to migrate the container",
 		},
+		cli.StringFlag{
+			Name:  "hook-pre-restore",
+			Usage: "Command to run right before restoring process",
+		},
+		cli.StringFlag{
+			Name:  "hook-post-restore",
+			Usage: "Command to run right after a successful process restoration",
+		},
+		cli.StringFlag{
+			Name:  "hook-failed-restore",
+			Usage: "Command to run right after a failed process restoration",
+		},
 	},
 	Action: func(c *cli.Context) {
+		/*
+			TriggerHook(c.String("hook-pre-restore"))
+			TriggerHook(c.String("hook-post-restore"))
+			TriggerHook(c.String("hook-failed-restore"))
+		*/
+
 		srcUrl := validate.ParseURL(c.String("src"))
 		dstUrl := validate.ParseURL(c.String("dst"))
 
@@ -42,7 +61,7 @@ var Command = cli.Command{
 		log.Println("Performing the checkpoint")
 		_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath)
 		if err != nil {
-			log.Fatal("Error performing checkpoint:",err)
+			log.Fatal("Error performing checkpoint:", err)
 		}
 
 		srcTarFile := fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
@@ -84,4 +103,16 @@ var Command = cli.Command{
 func getContainerId(path string) string {
 	_, id := filepath.Split(path)
 	return id
+}
+
+func TriggerHook(command string) error {
+	if command == "" {
+		return nil
+	}
+
+	args := strings.Fields(command)
+	c := cmd.NewLocal()
+	_, _, err := c.Run(args[0], args[1:]...)
+
+	return err
 }
