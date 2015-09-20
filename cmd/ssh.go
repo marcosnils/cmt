@@ -110,13 +110,13 @@ func (r *SSHCmd) Start(name string, args ...string) error {
 	if !r.connected {
 		err := r.connect()
 		if err != nil {
-			return "", "", err
+			return err
 		}
 	}
 
 	session, err := r.client.NewSession()
 	if err != nil {
-		return "", "", err
+		return err
 	}
 	defer session.Close()
 
