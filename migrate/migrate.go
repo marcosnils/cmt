@@ -139,6 +139,7 @@ var Command = cli.Command{
 			log.Println("Waiting for container to start...")
 			// We make a fast check so we don't wait for the first ticker internal
 			if isRunning(containerId) {
+				restoreSucceed = true
 				wg.Done()
 				return
 			}
@@ -146,6 +147,7 @@ var Command = cli.Command{
 			go func() {
 				for _ = range ticker.C {
 					if isRunning(containerId) {
+						restoreSucceed = true
 						break
 					}
 
