@@ -15,7 +15,7 @@ type Cmd interface {
 
 func Scp(src, dest *url.URL) error {
 	scpCmd := NewLocal()
-	_, _, err := scpCmd.Run("scp", formatCopyURL(src), formatCopyURL(dest))
+	_, _, err := scpCmd.Run("scp", "-3", formatCopyURL(src), formatCopyURL(dest))
 
 	return err
 }
