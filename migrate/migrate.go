@@ -166,7 +166,7 @@ var Command = cli.Command{
 		downtime = time.Since(migrateStart)
 
 		if restoreSucceed {
-			log.Printf("Restore finished successfully, total downtime: %sms", downtime*time.Millisecond)
+			log.Printf("Restore finished successfully, total downtime: %dms", downtime/time.Millisecond)
 		} else {
 			log.Println("Error performing restore:", restoreError)
 			// Rollback
