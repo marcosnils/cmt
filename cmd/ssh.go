@@ -120,7 +120,7 @@ func (r *SSHCmd) Start(name string, args ...string) (Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer session.Close()
+	r.currentSession = session
 
 	return r, session.Start(fmt.Sprintf("%s %s", name, strings.Join(args, " ")))
 }
