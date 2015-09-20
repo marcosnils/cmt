@@ -28,6 +28,11 @@ func (c *LocalCmd) Run(name string, args ...string) (string, string, error) {
 	return stdout.String(), stderr.String(), err
 }
 
+func (c *LocalCmd) Start(name string, args ...string) error {
+	command := exec.Command(name, args...)
+	return command.Start()
+}
+
 func (c *LocalCmd) Output(name string, args ...string) (string, string, error) {
 	log.Println(name, args)
 	stdout, stderr, err := c.Run(name, args...)

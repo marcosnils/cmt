@@ -105,6 +105,24 @@ func (r *SSHCmd) Run(name string, args ...string) (string, string, error) {
 
 	return stdout.String(), stderr.String(), err
 }
+
+func (r *SSHCmd) Start(name string, args ...string) error {
+	if !r.connected {
+		err := r.connect()
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	session, err := r.client.NewSession()
+	if err != nil {
+		return "", "", err
+	}
+	defer session.Close()
+
+	return session.Start(fmt.Sprintf("%s %s", name, strings.Join(args, " ")))
+}
+
 func (r *SSHCmd) Output(name string, args ...string) (string, string, error) {
 	log.Println(name, args)
 	stdout, stderr, err := r.Run(name, args...)

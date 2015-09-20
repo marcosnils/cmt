@@ -7,6 +7,7 @@ import (
 
 type Cmd interface {
 	Run(name string, args ...string) (string, string, error)
+	Start(name string, args ...string) error
 	Output(name string, args ...string) (string, string, error)
 	URL(path string) *url.URL
 }
