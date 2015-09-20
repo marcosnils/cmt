@@ -40,8 +40,9 @@ var Command = cli.Command{
 		log.Println("Preparing everything to do a checkpoint")
 		containerId := getContainerId(srcUrl.Path)
 		var imagesPath string
-
 		var restoreCmd cmd.Cmd
+		var migrateStart time.Time
+		var downtime time.Duration
 
 		if c.Bool("pre-dump") {
 			// Process pre-dump
@@ -65,6 +66,8 @@ var Command = cli.Command{
 			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images/0", dstUrl.Path))
 
 			// Process final image
+			migrateStart = time.Now()
+
 			imagesPath = fmt.Sprintf("%s/images/1", srcUrl.Path)
 			log.Println("Performing the checkpoint")
 			_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath, "--prev-images-dir", predumpPath)
@@ -98,6 +101,7 @@ var Command = cli.Command{
 			imagesPath = fmt.Sprintf("%s/images", srcUrl.Path)
 			prepareDir(src, imagesPath)
 
+			migrateStart = time.Now()
 			checkpoint(src, containerId, imagesPath, false)
 
 			srcTarFile := fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
@@ -159,8 +163,10 @@ var Command = cli.Command{
 
 		wg.Wait()
 
+		downtime = time.Since(migrateStart)
+
 		if restoreSucceed {
-			log.Println("Restore finished successfully")
+			log.Printf("Restore finished successfully, total downtime: %sms", downtime*time.Millisecond)
 		} else {
 			log.Println("Error performing restore:", restoreError)
 			// Rollback
