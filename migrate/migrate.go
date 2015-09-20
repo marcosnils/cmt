@@ -3,8 +3,10 @@ package migrate
 import (
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/codegangsta/cli"
 	"github.com/marcosnils/cmt/cmd"
@@ -134,8 +136,23 @@ var Command = cli.Command{
 		}()
 
 		go func() {
-			log.Println("Checking if container started...")
-			wg.Done()
+			log.Println("Waiting for container to start...")
+			// We make a fast check so we don't wait for the first ticker internal
+			if isRunning(containerId) {
+				wg.Done()
+				return
+			}
+			ticker := time.NewTicker(200 * time.Millisecond)
+			go func() {
+				for _ = range ticker.C {
+					if isRunning(containerId) {
+						break
+					}
+
+				}
+				ticker.Stop()
+				wg.Done()
+			}()
 		}()
 
 		wg.Wait()
@@ -148,6 +165,13 @@ var Command = cli.Command{
 		}
 
 	},
+}
+
+func isRunning(containerId string) bool {
+	if _, err := os.Stat(fmt.Sprintf("/var/run/opencontainer/containers/%s", containerId)); err == nil {
+		return true
+	}
+	return false
 }
 
 func unpackTar(cmd cmd.Cmd, tarFile, workDir string) {
