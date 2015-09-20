@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,8 +33,26 @@ var Command = cli.Command{
 			Name:  "force",
 			Usage: "Doesn't fail of validations related to different versions of executable binaries and cpu differences",
 		},
+		cli.StringFlag{
+			Name:  "hook-pre-restore",
+			Usage: "Command to run right before restoring process",
+		},
+		cli.StringFlag{
+			Name:  "hook-post-restore",
+			Usage: "Command to run right after a successful process restoration",
+		},
+		cli.StringFlag{
+			Name:  "hook-failed-restore",
+			Usage: "Command to run right after a failed process restoration",
+		},
 	},
 	Action: func(c *cli.Context) {
+		/*
+			TriggerHook(c.String("hook-pre-restore"))
+			TriggerHook(c.String("hook-post-restore"))
+			TriggerHook(c.String("hook-failed-restore"))
+		*/
+
 		srcUrl := validate.ParseURL(c.String("src"))
 		dstUrl := validate.ParseURL(c.String("dst"))
 
@@ -224,4 +243,16 @@ func prepareDir(cmd cmd.Cmd, path string) {
 func getContainerId(path string) string {
 	_, id := filepath.Split(path)
 	return id
+}
+
+func TriggerHook(command string) error {
+	if command == "" {
+		return nil
+	}
+
+	args := strings.Fields(command)
+	c := cmd.NewLocal()
+	_, _, err := c.Run(args[0], args[1:]...)
+
+	return err
 }
