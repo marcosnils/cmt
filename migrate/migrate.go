@@ -36,46 +36,46 @@ var Command = cli.Command{
 
 		_, _, err := src.Run("mkdir", "-p", imagesPath)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error preparing images dir:", err)
 		}
 
 		log.Println("Performing the checkpoint")
 		_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error performing checkpoint:",err)
 		}
 
 		srcTarFile := fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
 		dstTarFile := fmt.Sprintf("%s/images/dump.tar.gz", dstUrl.Path)
 		_, _, err = src.Run("sudo", "tar", "-czf", srcTarFile, "-C", fmt.Sprintf("%s/", imagesPath), ".")
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error compressing image in source:", err)
 		}
 
 		log.Println("Copying checkpoint image to dst")
 		_, _, err = dst.Run("mkdir", "-p", fmt.Sprintf("%s/images", dstUrl.Path))
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error preparing image dir in dst", err)
 		}
 
 		err = cmd.Scp(src.URL(srcTarFile), dst.URL(fmt.Sprintf("%s/images", dstUrl.Path)))
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error copying image files to dst", err)
 		}
 
 		log.Println("Preparing image at destination host")
 		_, _, err = dst.Run("sudo", "tar", "-C", fmt.Sprintf("%s/images", dstUrl.Path), "-xvzf", dstTarFile)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error uncompressing image in destination:", err)
 		}
 
 		log.Println("Performing the restore")
 		configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 		runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 		dstImagesPath := fmt.Sprintf("%s/images", dstUrl.Path)
-		_, _, err = dst.Output("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
+		_, _, err = dst.Run("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error performing restore:", err)
 		}
 
 	},
