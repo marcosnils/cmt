@@ -247,9 +247,13 @@ func TriggerHook(command string) error {
 		return nil
 	}
 
+	log.Printf("Running hook: %s\n", command)
+
 	args := strings.Fields(command)
 	c := cmd.NewLocal()
-	_, _, err := c.Output(args[0], args[1:]...)
+	stdout, stderr, err := c.Run(args[0], args[1:]...)
+
+	log.Println(stdout, stderr)
 
 	return err
 }
