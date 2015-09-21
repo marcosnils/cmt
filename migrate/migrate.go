@@ -249,7 +249,7 @@ func TriggerHook(command string) error {
 
 	args := strings.Fields(command)
 	c := cmd.NewLocal()
-	_, _, err := c.Run(args[0], args[1:]...)
+	_, _, err := c.Output(args[0], args[1:]...)
 
 	return err
 }
