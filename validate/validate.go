@@ -31,7 +31,7 @@ var Command = cli.Command{
 		srcURL := ParseURL(c.String("src"))
 		dstURL := ParseURL(c.String("dst"))
 
-		Validate(srcURL, dstURL)
+		Validate(srcURL, dstURL, false)
 		println("Validation succeded")
 
 	},
@@ -56,7 +56,7 @@ func ParseURL(rawurl string) *url.URL {
 
 }
 
-func Validate(src, dst *url.URL) (srcCmd, dstCmd cmd.Cmd) {
+func Validate(src, dst *url.URL, continueOnWarnings bool) (srcCmd, dstCmd cmd.Cmd) {
 	if src == nil || dst == nil {
 		log.Fatal("Both src and dst must be specified")
 	}
@@ -64,11 +64,19 @@ func Validate(src, dst *url.URL) (srcCmd, dstCmd cmd.Cmd) {
 	srcCmd = GetCommand(src)
 	dstCmd = GetCommand(dst)
 
-	if e := checkVersion(srcCmd, dstCmd, "criu"); e != nil {
-		log.Fatal(e)
+	if found, e := checkVersion(srcCmd, dstCmd, "criu"); e != nil {
+		if found && continueOnWarnings {
+			log.Println("Warning: ", e)
+		} else {
+			log.Fatal(e)
+		}
 	}
-	if e := checkVersion(srcCmd, dstCmd, "runc"); e != nil {
-		log.Fatal(e)
+	if found, e := checkVersion(srcCmd, dstCmd, "runc"); e != nil {
+		if found && continueOnWarnings {
+			log.Println("Warning: ", e)
+		} else {
+			log.Fatal(e)
+		}
 	}
 
 	if e := checkKernelCap(srcCmd); e != nil {
@@ -80,7 +88,11 @@ func Validate(src, dst *url.URL) (srcCmd, dstCmd cmd.Cmd) {
 	}
 
 	if e := checkCPUCompat(srcCmd, dstCmd); e != nil {
-		log.Fatal(e)
+		if continueOnWarnings {
+			log.Println("Warning: ", e)
+		} else {
+			log.Fatal(e)
+		}
 	}
 
 	return
@@ -146,7 +158,7 @@ func GetCommand(hostURL *url.URL) cmd.Cmd {
 
 }
 
-func checkVersion(sCmd, dCmd cmd.Cmd, name string) error {
+func checkVersion(sCmd, dCmd cmd.Cmd, name string) (bool, error) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	var sourceVersion, destVersion string
@@ -163,17 +175,17 @@ func checkVersion(sCmd, dCmd cmd.Cmd, name string) error {
 	wg.Wait()
 
 	if sourceError != nil {
-		return fmt.Errorf("%s in src", sourceError)
+		return false, fmt.Errorf("%s in src", sourceError)
 	}
 	if destError != nil {
-		return fmt.Errorf("%s in dst", destError)
+		return false, fmt.Errorf("%s in dst", destError)
 	}
 
 	if sourceVersion != destVersion {
-		return fmt.Errorf("ERROR: Source and destination versions of %s do not match", name)
+		return true, fmt.Errorf("ERROR: Source and destination versions of %s do not match", name)
 	}
 
-	return nil
+	return true, nil
 }
 
 func getVersion(command cmd.Cmd, name string) (string, error) {

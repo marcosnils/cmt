@@ -28,13 +28,17 @@ var Command = cli.Command{
 			Name:  "pre-dump",
 			Usage: "Perform a pre-dump to minimize downtime",
 		},
+		cli.StringFlag{
+			Name:  "force",
+			Usage: "Doesn't fail of validations related to different versions of executable binaries and cpu differences",
+		},
 	},
 	Action: func(c *cli.Context) {
 		srcUrl := validate.ParseURL(c.String("src"))
 		dstUrl := validate.ParseURL(c.String("dst"))
 
 		log.Println("Performing validations")
-		src, dst := validate.Validate(srcUrl, dstUrl)
+		src, dst := validate.Validate(srcUrl, dstUrl, c.Bool("force"))
 
 		log.Println("Preparing everything to do a checkpoint")
 		containerId := getContainerId(srcUrl.Path)
