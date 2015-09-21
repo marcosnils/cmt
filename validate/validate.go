@@ -88,7 +88,7 @@ func Validate(src, dst *url.URL) (srcCmd, dstCmd cmd.Cmd) {
 
 func checkCPUCompat(srcCmd, dstCmd cmd.Cmd) error {
 	// Dump
-	_, _, err := srcCmd.Run("sudo", "criu", "cpuinfo", "dump")
+	_, _, err := srcCmd.Run("criu", "cpuinfo", "dump")
 	if _, ok := err.(*ssh.ExitError); ok {
 		return fmt.Errorf("Error dumping CPU info")
 	} else if _, ok := err.(*exec.ExitError); ok {
@@ -109,7 +109,7 @@ func checkCPUCompat(srcCmd, dstCmd cmd.Cmd) error {
 	}
 
 	// Check
-	_, _, err = srcCmd.Run("sudo", "criu", "cpuinfo", "check")
+	_, _, err = srcCmd.Run("criu", "cpuinfo", "check")
 	if _, ok := err.(*ssh.ExitError); ok {
 		return fmt.Errorf("Error checking CPU info")
 	} else if _, ok := err.(*exec.ExitError); ok {
