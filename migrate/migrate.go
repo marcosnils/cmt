@@ -220,7 +220,7 @@ func prepareTar(cmd cmd.Cmd, tarFile, workDir string) {
 
 func checkpoint(cmd cmd.Cmd, containerId, imagesPath string, predump bool) {
 	log.Printf("Performing the checkpoint predump = %t\n", predump)
-	args := []string{"runc", "--id", containerId, "checkpoint", "--image-path", imagesPath}
+	args := []string{"runc", "--id", containerId, "checkpoint", "--track-mem", "--image-path", imagesPath}
 	if predump {
 		args = append(args, "--pre-dump")
 	}
