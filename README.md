@@ -52,6 +52,8 @@ For example:
 cmt migrate --hook-pre-restore "echo pre restore" --hook-post-restore "echo post restore" --hook-failed-restore "echo failed restore"
 ```
 
+There are some very useful scenarios for this. For example in AWS you could use the pre-restore hook to move an Elastic Network Interface so the destination has the same IP address of the source.
+
 ## FAQ
 
 ### What kind of validatiosn does CMT do?
