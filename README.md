@@ -56,7 +56,7 @@ There are some very useful scenarios for this. For example in AWS you could use 
 
 ## FAQ
 
-### What kind of validatiosn does CMT do?
+### What kind of validations does CMT do?
 
 - Binary existence (runC, criu)
 - Binary version matching
