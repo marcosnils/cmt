@@ -47,12 +47,6 @@ var Command = cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) {
-		/*
-			TriggerHook(c.String("hook-pre-restore"))
-			TriggerHook(c.String("hook-post-restore"))
-			TriggerHook(c.String("hook-failed-restore"))
-		*/
-
 		srcUrl := validate.ParseURL(c.String("src"))
 		dstUrl := validate.ParseURL(c.String("dst"))
 
@@ -111,14 +105,15 @@ var Command = cli.Command{
 			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images/1", dstUrl.Path))
 
 			log.Println("Performing the restore")
+			TriggerHook(c.String("hook-pre-restore"))
 			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 			dstImagesPath := fmt.Sprintf("%s/images/1", dstUrl.Path)
+
 			restoreCmd, err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
 			if err != nil {
 				log.Fatal("Error performing restore:", err)
 			}
-
 		} else {
 			imagesPath = fmt.Sprintf("%s/images", srcUrl.Path)
 			prepareDir(src, imagesPath)
@@ -141,6 +136,7 @@ var Command = cli.Command{
 			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images", dstUrl.Path))
 
 			log.Println("Performing the restore")
+			TriggerHook(c.String("hook-pre-restore"))
 			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 			dstImagesPath := fmt.Sprintf("%s/images", dstUrl.Path)
@@ -189,9 +185,10 @@ var Command = cli.Command{
 
 		if restoreSucceed {
 			log.Printf("Restore finished successfully, total downtime: %dms", downtime/time.Millisecond)
+			TriggerHook(c.String("hook-post-restore"))
 		} else {
 			log.Println("Error performing restore:", restoreError)
-			// Rollback
+			TriggerHook(c.String("hook-failed-restore"))
 		}
 
 	},
