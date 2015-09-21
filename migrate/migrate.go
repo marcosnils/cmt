@@ -86,7 +86,7 @@ var Command = cli.Command{
 
 			imagesPath = fmt.Sprintf("%s/images/1", srcUrl.Path)
 			log.Println("Performing the checkpoint")
-			_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath, "--prev-images-dir", predumpPath)
+			_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath, "--prev-images-dir", "../0", "--track-mem")
 			if err != nil {
 				log.Fatal("Error performing checkpoint:", err)
 			}
