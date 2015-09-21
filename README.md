@@ -12,6 +12,8 @@ Checkpoint & Restore is still a feature which is not generically available to co
 
 This project uses custom patched versions of [CRIU](https://github.com/marcosnils/criu) and [runC](https://github.com/marcosnils/runc/tree/pre_dump) to work. It's important to install these specific versions for CMT to work. CRIU patch has been already proposed to upstream, we hold on runC on the other hand because we needed to implement it fast and we're not sure of any possible impact on the project.
 
+*Update 09/21/15*: CRIU patch as been merged to upstream. Master version should work with CMT.
+
 
 ## Usage
 
