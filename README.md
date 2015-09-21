@@ -38,7 +38,19 @@ heavy duty to perform container migration (image layer diffs included).
 
 ## Hooks
 
-TODO
+CMT supports 3 kind of hooks. A hook is any command that you provide and that CMT will run when reaching some specific state in the migration process.
+The supported hooks are:
+  - Pre-restore: which is executed right before restoring the container
+on the destination host.
+  - Post-restore: which is executed after successfully restoring the
+  container on the destination host.
+  - Failed-restore: which is executed after a failing to restore the
+  container on the destination host.
+
+For example:
+```
+cmt migrate --hook-pre-restore "echo pre restore" --hook-post-restore "echo post restore" --hook-failed-restore "echo failed restore"
+```
 
 ## FAQ
 
