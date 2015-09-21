@@ -15,6 +15,8 @@ This project uses custom patched versions of [CRIU](https://github.com/marcosnil
 
 ## Usage
 
+`go get github.com/marcosnils/cmt`
+
 `cmt --help` should list all possible CMT commands and options
 
 ## Authentication
