@@ -29,7 +29,7 @@ var Command = cli.Command{
 			Name:  "pre-dump",
 			Usage: "Perform a pre-dump to minimize downtime",
 		},
-		cli.StringFlag{
+		cli.BoolFlag{
 			Name:  "force",
 			Usage: "Doesn't fail of validations related to different versions of executable binaries and cpu differences",
 		},
