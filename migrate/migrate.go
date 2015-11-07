@@ -10,6 +10,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/marcosnils/cmt/cmd"
+	"github.com/marcosnils/cmt/iptables"
 	"github.com/marcosnils/cmt/validate"
 )
 
@@ -119,7 +120,17 @@ var Command = cli.Command{
 			prepareDir(src, imagesPath)
 
 			migrateStart = time.Now()
+			iptablesBefore, ipErr := getIPTables(src)
+			if ipErr != nil {
+				log.Fatal("Error capturing iptables rules. ", ipErr)
+			}
 			checkpoint(src, containerId, imagesPath, false)
+			iptablesAfter, ipErr2 := getIPTables(src)
+			if ipErr2 != nil {
+				log.Fatal("Error capturing iptables rules. ", ipErr2)
+			}
+
+			iptablesRules := iptables.Diff(iptablesBefore, iptablesAfter)
 
 			srcTarFile := fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
 			prepareTar(src, srcTarFile, imagesPath)
@@ -136,6 +147,11 @@ var Command = cli.Command{
 			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images", dstUrl.Path))
 
 			log.Println("Performing the restore")
+			// first thing to do, apply the iptables rules
+			applyErr := applyIPTablesRules(dst, iptablesRules)
+			if applyErr != nil {
+				log.Fatal("Error applying IPTables rules. ", applyErr)
+			}
 			TriggerHook(c.String("hook-pre-restore"))
 			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
@@ -192,6 +208,26 @@ var Command = cli.Command{
 		}
 
 	},
+}
+
+func applyIPTablesRules(host cmd.Cmd, rules []string) error {
+	for _, rule := range rules {
+		args := []string{"iptables"}
+		args = append(args, strings.Fields(rule)...)
+		_, _, err := host.Run("sudo", args...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getIPTables(host cmd.Cmd) (string, error) {
+	rules, _, err := host.Run("sudo", "iptables-save")
+	if err != nil {
+		return "", err
+	}
+	return rules, nil
 }
 
 func isRunning(containerId string, dstCmd cmd.Cmd) bool {
