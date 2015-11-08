@@ -11,6 +11,10 @@ func Diff(a, b string) []string {
 	var diff []string
 
 	for _, aline := range alines {
+		// Only consider -A lines which are the actual rules
+		if !strings.HasPrefix(strings.TrimSpace(aline), "-A") {
+			continue
+		}
 		match := false
 		for _, bline := range blines {
 			if aline == bline {

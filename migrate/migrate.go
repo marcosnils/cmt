@@ -111,7 +111,7 @@ var Command = cli.Command{
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 			dstImagesPath := fmt.Sprintf("%s/images/1", dstUrl.Path)
 
-			restoreCmd, err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
+			restoreCmd, err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--tcp-established", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
 			if err != nil {
 				log.Fatal("Error performing restore:", err)
 			}
@@ -121,16 +121,19 @@ var Command = cli.Command{
 
 			migrateStart = time.Now()
 			iptablesBefore, ipErr := getIPTables(src)
+
 			if ipErr != nil {
 				log.Fatal("Error capturing iptables rules. ", ipErr)
 			}
 			checkpoint(src, containerId, imagesPath, false)
 			iptablesAfter, ipErr2 := getIPTables(src)
+
 			if ipErr2 != nil {
 				log.Fatal("Error capturing iptables rules. ", ipErr2)
 			}
 
-			iptablesRules := iptables.Diff(iptablesBefore, iptablesAfter)
+			log.Println(iptablesBefore, iptablesAfter)
+			iptablesRules := iptables.Diff(iptablesAfter, iptablesBefore)
 
 			srcTarFile := fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
 			prepareTar(src, srcTarFile, imagesPath)
@@ -156,7 +159,7 @@ var Command = cli.Command{
 			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 			dstImagesPath := fmt.Sprintf("%s/images", dstUrl.Path)
-			restoreCmd, err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
+			restoreCmd, err = dst.Start("sudo", "runc", "--id", containerId, "restore", "--tcp-established", "--image-path", dstImagesPath, "--config-file", configFilePath, "--runtime-file", runtimeFilePath)
 			if err != nil {
 				log.Fatal("Error performing restore:", err)
 			}
@@ -211,6 +214,7 @@ var Command = cli.Command{
 }
 
 func applyIPTablesRules(host cmd.Cmd, rules []string) error {
+	log.Printf("%#v\n", rules)
 	for _, rule := range rules {
 		args := []string{"iptables"}
 		args = append(args, strings.Fields(rule)...)
@@ -256,7 +260,7 @@ func prepareTar(cmd cmd.Cmd, tarFile, workDir string) {
 
 func checkpoint(cmd cmd.Cmd, containerId, imagesPath string, predump bool) {
 	log.Printf("Performing the checkpoint predump = %t\n", predump)
-	args := []string{"runc", "--id", containerId, "checkpoint", "--track-mem", "--image-path", imagesPath}
+	args := []string{"runc", "--id", containerId, "checkpoint", "--tcp-established", "--track-mem", "--image-path", imagesPath}
 	if predump {
 		args = append(args, "--pre-dump")
 	}
