@@ -132,7 +132,6 @@ var Command = cli.Command{
 				log.Fatal("Error capturing iptables rules. ", ipErr2)
 			}
 
-			log.Println(iptablesBefore, iptablesAfter)
 			iptablesRules := iptables.Diff(iptablesAfter, iptablesBefore)
 
 			srcTarFile := fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
@@ -214,7 +213,6 @@ var Command = cli.Command{
 }
 
 func applyIPTablesRules(host cmd.Cmd, rules []string) error {
-	log.Printf("%#v\n", rules)
 	for _, rule := range rules {
 		args := []string{"iptables"}
 		args = append(args, strings.Fields(rule)...)
@@ -237,10 +235,10 @@ func getIPTables(host cmd.Cmd) (string, error) {
 func isRunning(containerId string, dstCmd cmd.Cmd) bool {
 	_, _, err := dstCmd.Run("stat", fmt.Sprintf("/var/run/opencontainer/containers/%s", containerId))
 	if err != nil {
-		return true
+		return false
 	}
 
-	return false
+	return true
 }
 
 func unpackTar(cmd cmd.Cmd, tarFile, workDir string) {
