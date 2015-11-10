@@ -154,7 +154,14 @@ var Command = cli.Command{
 			if applyErr != nil {
 				log.Fatal("Error applying IPTables rules. ", applyErr)
 			}
+
 			TriggerHook(c.String("hook-pre-restore"))
+
+			// after the restore, we remove iptable rules from source host
+			removeErr := removeIPTablesRules(src, iptablesRules)
+			if removeErr != nil {
+				log.Fatal("Error removing IPTables rules. ", removeErr)
+			}
 			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 			dstImagesPath := fmt.Sprintf("%s/images", dstUrl.Path)
@@ -163,11 +170,6 @@ var Command = cli.Command{
 				log.Fatal("Error performing restore:", err)
 			}
 
-			// after the restore, we remove iptable rules from source host
-			removeErr := removeIPTablesRules(src, iptablesRules)
-			if removeErr != nil {
-				log.Fatal("Error removing IPTables rules. ", removeErr)
-			}
 		}
 
 		var restoreSucceed bool
@@ -233,7 +235,7 @@ func removeIPTablesRules(host cmd.Cmd, rules []string) error {
 	for _, rule := range rules {
 		args := []string{"iptables"}
 		args = append(args, strings.Fields(rule)...)
-		args[0] = "-D"
+		args[1] = "-D"
 		_, _, err := host.Run("sudo", args...)
 		if err != nil {
 			return err
