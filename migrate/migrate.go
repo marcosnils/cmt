@@ -163,6 +163,11 @@ var Command = cli.Command{
 				log.Fatal("Error performing restore:", err)
 			}
 
+			// after the restore, we remove iptable rules from source host
+			removeErr := removeIPTablesRules(src, iptablesRules)
+			if removeErr != nil {
+				log.Fatal("Error removing IPTables rules. ", removeErr)
+			}
 		}
 
 		var restoreSucceed bool
@@ -216,6 +221,19 @@ func applyIPTablesRules(host cmd.Cmd, rules []string) error {
 	for _, rule := range rules {
 		args := []string{"iptables"}
 		args = append(args, strings.Fields(rule)...)
+		_, _, err := host.Run("sudo", args...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func removeIPTablesRules(host cmd.Cmd, rules []string) error {
+	for _, rule := range rules {
+		args := []string{"iptables"}
+		args = append(args, strings.Fields(rule)...)
+		args[0] = "-D"
 		_, _, err := host.Run("sudo", args...)
 		if err != nil {
 			return err
