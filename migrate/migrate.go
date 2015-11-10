@@ -85,12 +85,26 @@ var Command = cli.Command{
 			// Process final image
 			migrateStart = time.Now()
 
+
+			iptablesBefore, ipErr := getIPTables(src)
+
+			if ipErr != nil {
+				log.Fatal("Error capturing iptables rules. ", ipErr)
+			}
 			imagesPath = fmt.Sprintf("%s/images/1", srcUrl.Path)
 			log.Println("Performing the checkpoint")
-			_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath, "--prev-images-dir", "../0", "--track-mem")
+			_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath, "--prev-images-dir", "../0", "--track-mem", "--tcp-established")
 			if err != nil {
 				log.Fatal("Error performing checkpoint:", err)
 			}
+
+			iptablesAfter, ipErr2 := getIPTables(src)
+
+			if ipErr2 != nil {
+				log.Fatal("Error capturing iptables rules. ", ipErr2)
+			}
+
+			iptablesRules := iptables.Diff(iptablesAfter, iptablesBefore)
 
 			srcTarFile = fmt.Sprintf("%s/dump.tar.gz", srcUrl.Path)
 			prepareTar(src, srcTarFile, imagesPath)
@@ -106,7 +120,19 @@ var Command = cli.Command{
 			unpackTar(dst, dstTarFile, fmt.Sprintf("%s/images/1", dstUrl.Path))
 
 			log.Println("Performing the restore")
+
+			// first thing to do, apply the iptables rules
+			applyErr := applyIPTablesRules(dst, iptablesRules)
+			if applyErr != nil {
+				log.Fatal("Error applying IPTables rules. ", applyErr)
+			}
 			TriggerHook(c.String("hook-pre-restore"))
+
+			// after the restore, we remove iptable rules from source host
+			removeErr := removeIPTablesRules(src, iptablesRules)
+			if removeErr != nil {
+				log.Fatal("Error removing IPTables rules. ", removeErr)
+			}
 			configFilePath := fmt.Sprintf("%s/config.json", dstUrl.Path)
 			runtimeFilePath := fmt.Sprintf("%s/runtime.json", dstUrl.Path)
 			dstImagesPath := fmt.Sprintf("%s/images/1", dstUrl.Path)
