@@ -92,6 +92,7 @@ var Command = cli.Command{
 				log.Fatal("Error capturing iptables rules. ", ipErr)
 			}
 			imagesPath = fmt.Sprintf("%s/images/1", srcUrl.Path)
+			prepareDir(src, fmt.Sprintf("%s/images/1", srcUrl.Path))
 			log.Println("Performing the checkpoint")
 			_, _, err = src.Run("sudo", "runc", "--id", containerId, "checkpoint", "--image-path", imagesPath, "--prev-images-dir", "../0", "--track-mem", "--tcp-established")
 			if err != nil {
@@ -110,7 +111,7 @@ var Command = cli.Command{
 			prepareTar(src, srcTarFile, imagesPath)
 			prepareDir(dst, fmt.Sprintf("%s/images/1", dstUrl.Path))
 
-			log.Println("Copying predump image to dst")
+			log.Println("Copying final dump image to dst")
 			err = cmd.Scp(src.URL(srcTarFile), dst.URL(fmt.Sprintf("%s/images/1", dstUrl.Path)))
 			if err != nil {
 				log.Fatal("Error copying predump image files to dst", err)
