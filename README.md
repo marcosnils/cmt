@@ -10,7 +10,7 @@ Checkpoint & Restore is still a feature which is not generically available to co
 
 ## IMPORTANT!!
 
-This project uses custom patched versions of [CRIU](https://github.com/marcosnils/criu) and [runC](https://github.com/marcosnils/runc/tree/pre_dump) to work. It's important to install these specific versions for CMT to work. CRIU patch has been already proposed to upstream, we hold on runC on the other hand because we needed to implement it fast and we're not sure of any possible impact on the project.
+This project uses custom patched versions of ~~[CRIU](https://github.com/marcosnils/criu)~~ and [runC](https://github.com/marcosnils/runc/tree/pre_dump) to work. It's important to install these specific versions for CMT to work. CRIU patch has been already proposed to upstream, we hold on runC on the other hand because we needed to implement it fast and we're not sure of any possible impact on the project.
 
 *Update 09/21/15*: CRIU patch as been merged to upstream [here](https://github.com/xemul/criu/commit/e3f900f95429bc0447d8e3cff3cbb2e0a19f8d23). Master version should work with CMT.
 
